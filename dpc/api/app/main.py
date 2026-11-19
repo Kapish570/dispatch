@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import assign, config, db, middleware, problems, service
+from . import assign, compute, config, db, middleware, problems, service
 from .jsonlog import log
 
 
@@ -48,3 +48,4 @@ app.add_middleware(
 problems.install(app)
 app.include_router(service.router)
 app.include_router(assign.router)  # C30: черга гарячої лінії (ЛР1)
+app.include_router(compute.router)  # C30: паралельне інтегрування (ЛР2)

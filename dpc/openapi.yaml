@@ -4,7 +4,7 @@
 openapi: 3.1.0
 info:
   title: Диспетчерська допомоги — DPC (гаряча лінія)
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Сервіс `api` приймає дзвінки гарячої лінії в обмежену чергу; пул обробників виконує
     повільний виклик «зв'язок із командою» (200–900 мс) і призначає вільну команду району.
@@ -179,6 +179,77 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/compute:
+    post:
+      operationId: startCompute
+      summary: Паралельне інтегрування λ(t) = A·t·e^(−t/τ) (ЛР2)
+      description: |
+        Кількість заявок за перші T годин після події. Еталон — через первісну
+        F(t) = −A·τ·(t + τ)·e^(−t/τ), A = 40, τ = 3. За замовчуванням синхронно (200 з результатом);
+        `"async": true` — 202 і Location. `mode`: local (локальні суми), lock (спільна сума під
+        блокуванням), none (спільна сума без синхронізації — дослід О2.4).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComputeRequest"
+            examples:
+              normal:
+                value:
+                  a: 0
+                  b: 12
+                  n: 10000000
+                  workers: 4
+                  method: midpoint
+              shared_none:
+                value:
+                  n: 400000
+                  workers: 4
+                  mode: none
+      responses:
+        "200":
+          description: Розрахунок виконано
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeJob"
+        "202":
+          description: Асинхронний розрахунок прийнято
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeJob"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /v1/compute/{id}:
+    get:
+      operationId: getCompute
+      summary: Стан і результат розрахунку
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Стан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComputeJob"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     apiToken:
@@ -265,6 +336,81 @@ components:
             type: string
         invariant_ok:
           type: boolean
+    ComputeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        a:
+          type: number
+          default: 0
+        b:
+          type: number
+          default: 12
+        n:
+          type: integer
+          minimum: 1
+          default: 10000000
+          description: Кількість частин поділу проміжку
+        workers:
+          type: integer
+          enum: [1, 2, 4]
+          default: 4
+          description: Кількість частин розрахунку (і процесів, якщо processes не задано)
+        processes:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: Розмір пулу процесів (дослід гіпотези О2.3)
+        method:
+          type: string
+          enum: [midpoint, trapezoid, simpson]
+          default: midpoint
+        order:
+          type: string
+          enum: [sequential, kahan]
+          default: sequential
+          description: Порядок сумування — звичайне або компенсоване
+        mode:
+          type: string
+          enum: [local, lock, none]
+          default: local
+        async:
+          type: boolean
+          default: false
+    ComputeJob:
+      type: object
+      required: [id, state]
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum: [queued, running, done, failed]
+        active_parts:
+          type: integer
+        result:
+          type: [object, "null"]
+          properties:
+            value:
+              type: number
+            reference:
+              type: number
+            error:
+              type: number
+            within_tolerance:
+              type: boolean
+            workers:
+              type: integer
+            processes:
+              type: integer
+            wall_s:
+              type: number
+            pool_start_s:
+              type: number
+            compute_s:
+              type: number
+            cores_available:
+              type: integer
   responses:
     BadRequest:
       description: Некоректний запит
