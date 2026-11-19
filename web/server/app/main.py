@@ -15,8 +15,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from . import cache, db, metrics, middleware, problems, service, telemetry
+from . import cache, config, db, metrics, middleware, problems, requests_api, service, telemetry
 from .jsonlog import log
 
 
@@ -35,9 +36,17 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 # The contract is openapi.yaml of your repository, so the generated schema routes are off.
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
-middleware.install(app)
+# Клієнт працює на іншому походженні (CLIENT_ORIGIN): дозволяємо лише його, без "*" (повністю — О3.3).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[config.CLIENT_ORIGIN],
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["Content-Type", "X-User-Id", "Idempotency-Key", "If-Match", "X-Request-ID"],
+    expose_headers=["Location", "ETag", "Retry-After", "X-Request-ID", "X-Instance"],
+)
+middleware.install(app)  # додано після CORS — зовнішній: X-Request-ID має і відповідь на OPTIONS
 problems.install(app)
 app.include_router(service.router)
 app.include_router(metrics.router)
 telemetry.install(app)
-# app.include_router(your_module.router)
+app.include_router(requests_api.router)  # C30: заявки (О1.4, О1.5)
