@@ -16,7 +16,7 @@
 Автори:
 - Малюта Артем, ст. гр. ІТІН-23-2.
 
-Виконано: Web ЛР1.
+Виконано: ЛР1 обох дисциплін.
 
 ## 2. Проєкт
 
@@ -336,7 +336,38 @@ sequenceDiagram
 
 | Пункт | Де реалізовано | Перевірка та свідчення |
 |---|---|---|
-| | | |
+| О1.1. Приймання запитів | `dpc/api/app/assign.py`, `migrations/002_dpc_queue.sql` | 202 до завершення; стани queued → processing → done / rejected / failed |
+| О1.2. Обмежена черга й перевантаження | `asyncio.Queue(maxsize=QUEUE_CAPACITY)`, `put_nowait` | Дослід «Заповнена черга»: 429 з Retry-After, черга ≤ 5, p95 `/health` = 23,6 мс |
+| О1.3. Пул обробників | `assign.py::start`, `worker` | Рівно `WORKERS` задач; повільний виклик — `await asyncio.sleep`, не блокує приймання |
+| О1.4. Захист спільного ресурсу | `change_locked` (транзакція + `FOR UPDATE`), `change_unprotected` | 10 запитів на 3 команди: locked — 3 done / 7 rejected; unprotected — 4–8 done, одна команда на 2–3 заявках (рисунок 3) |
+| О1.5. Час виконання й метрики | `Timing`, `/metrics` | Позначки монотонного годинника, `queue_wait / processing / delivery_wait`, перевірка порядку; `queue_length`, `processing`, `rejected`, `full_ms_p50/p95/p99` |
+
+Докладно: [results/dpc-lr1/README.md](results/dpc-lr1/README.md).
+
+```mermaid
+flowchart LR
+    R[POST /v1/assignment-requests]:::in -->|put_nowait| Q{{Черга<br/>QUEUE_CAPACITY}}:::q
+    R -.->|черга повна| E[429 + Retry-After]:::err
+    Q --> W1[Обробник 1]:::w
+    Q --> W2[Обробник …]:::w
+    Q --> W3[Обробник WORKERS]:::w
+    W1 --> S[Повільний виклик<br/>200–900 мс]:::slow
+    W2 --> S
+    W3 --> S
+    S --> CS[Критична секція<br/>assign_team: FOR UPDATE]:::cs
+    CS --> DB[(district_teams,<br/>help_request)]:::db
+    classDef in fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1
+    classDef q fill:#fff3e0,stroke:#fb8c00,color:#e65100
+    classDef err fill:#ffebee,stroke:#e53935,color:#b71c1c
+    classDef w fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+    classDef slow fill:#f5f5f5,stroke:#757575,color:#212121
+    classDef cs fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    classDef db fill:#fffde7,stroke:#fbc02d,color:#5d4037
+```
+
+![DPC ЛР1](results/dpc-lr1/dpc-lr1.png)
+
+*Рисунок 3 — 10 запитів на 3 команди (з блокуванням і без) та заповнена черга.*
 
 #### ЛР2. Паралельний чисельний розрахунок
 
@@ -375,6 +406,8 @@ sequenceDiagram
 | Дослід | Режим і команда | Що видно / посилання на результат |
 |---|---|---|
 | Сценарій Web ЛР1 | `python experiments/web_lr1_scenario.py` | 14/14 перевірок, усі сторінки списку без пропусків і повторів — `results/web-lr1/scenario.json` |
+| 10 дзвінків на 3 команди (DPC О1.4) | `WORKERS=10`; `python experiments/dpc_lr1_race.py --district test-race`, потім `RESOURCE_MODE=unprotected` і `--district test-unprotected` | locked: 3/7 у 3 запусках; unprotected: 4, 8, 6 призначень на 3 команди |
+| Заповнена черга (DPC О1.2) | `QUEUE_CAPACITY=5 WORKERS=2`; `python experiments/dpc_lr1_queue_full.py --clients 30 --seconds 10` | 42×202, 3265×429 (усі з Retry-After), max черга 5, `/health` p50 17,1 мс, p95 23,6 мс |
 
 Умови, прогноз, вимірювання й висновки кожного досліду - у `results/<ЛР>/README.md`.
 
@@ -386,7 +419,7 @@ sequenceDiagram
 
 | Учасник | Реалізовані пункти й виконані досліди |
 |---|---|
-| Малюта Артем | Web ЛР1 (О1.1-О1.7, Д1.1) |
+| Малюта Артем | Web ЛР1 (О1.1-О1.7, Д1.1), DPC ЛР1 (О1.1-О1.5) |
 
 ### Використані бібліотеки
 
