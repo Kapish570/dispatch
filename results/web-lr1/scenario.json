@@ -1,0 +1,288 @@
+{
+  "created": {
+    "id": "4583be1c-44df-46ff-8936-bd8c7523be44",
+    "district_id": "center",
+    "address": "вул. Сумська, 10, кв. 5",
+    "kind": "medicine",
+    "priority": 1,
+    "kits": 2,
+    "team_id": "center-t062",
+    "status": "assigned",
+    "channel": "web",
+    "version": 1,
+    "created_at": "2026-11-19T14:13:07.963876+00:00",
+    "accept_deadline": "2026-11-19T14:23:07.963876+00:00"
+  },
+  "cases": [
+    {
+      "case": "головна операція (center)",
+      "status": 201,
+      "expected": 201,
+      "ok": true,
+      "instance": "app-b",
+      "location": "/v1/requests/4583be1c-44df-46ff-8936-bd8c7523be44",
+      "body": {
+        "id": "4583be1c-44df-46ff-8936-bd8c7523be44",
+        "district_id": "center",
+        "address": "вул. Сумська, 10, кв. 5",
+        "kind": "medicine",
+        "priority": 1,
+        "kits": 2,
+        "team_id": "center-t062",
+        "status": "assigned",
+        "channel": "web",
+        "version": 1,
+        "created_at": "2026-11-19T14:13:07.963876+00:00",
+        "accept_deadline": "2026-11-19T14:23:07.963876+00:00"
+      }
+    },
+    {
+      "case": "читання за Location",
+      "status": 200,
+      "expected": 200,
+      "ok": true,
+      "instance": "app-a",
+      "location": null,
+      "body": {
+        "id": "4583be1c-44df-46ff-8936-bd8c7523be44",
+        "district_id": "center",
+        "address": "вул. Сумська, 10, кв. 5",
+        "kind": "medicine",
+        "priority": 1,
+        "kits": 2,
+        "team_id": "center-t062",
+        "status": "assigned",
+        "channel": "web",
+        "version": 1,
+        "created_at": "2026-11-19T14:13:07.963876+00:00",
+        "accept_deadline": "2026-11-19T14:23:07.963876+00:00"
+      }
+    },
+    {
+      "case": "чужа заявка",
+      "status": 404,
+      "expected": 404,
+      "ok": true,
+      "instance": "app-b",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/not-found",
+        "title": "Request not found",
+        "status": 404,
+        "instance": "/v1/requests/4583be1c-44df-46ff-8936-bd8c7523be44"
+      }
+    },
+    {
+      "case": "пошкоджений JSON",
+      "status": 400,
+      "expected": 400,
+      "ok": true,
+      "instance": "app-a",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/malformed-json",
+        "title": "Request body is not valid JSON",
+        "status": 400,
+        "instance": "/v1/requests",
+        "errors": [
+          {
+            "field": "body.1",
+            "message": "JSON decode error"
+          }
+        ]
+      }
+    },
+    {
+      "case": "неправильні дані",
+      "status": 422,
+      "expected": 422,
+      "ok": true,
+      "instance": "app-b",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/invalid-request",
+        "title": "Invalid request data",
+        "status": 422,
+        "instance": "/v1/requests",
+        "errors": [
+          {
+            "field": "body.kind",
+            "message": "Input should be 'medicine', 'escort', 'food' or 'other'"
+          }
+        ]
+      }
+    },
+    {
+      "case": "невідоме поле",
+      "status": 422,
+      "expected": 422,
+      "ok": true,
+      "instance": "app-a",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/invalid-request",
+        "title": "Invalid request data",
+        "status": 422,
+        "instance": "/v1/requests",
+        "errors": [
+          {
+            "field": "body.owner",
+            "message": "Extra inputs are not permitted"
+          }
+        ]
+      }
+    },
+    {
+      "case": "немає району",
+      "status": 404,
+      "expected": 404,
+      "ok": true,
+      "instance": "app-b",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/district-not-found",
+        "title": "District not found",
+        "status": 404,
+        "detail": "Району no-such-district немає",
+        "instance": "/v1/requests"
+      }
+    },
+    {
+      "case": "без X-User-Id",
+      "status": 401,
+      "expected": 401,
+      "ok": true,
+      "instance": "app-a",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/unauthorized",
+        "title": "User required",
+        "status": 401,
+        "detail": "Заголовок X-User-Id обов'язковий",
+        "instance": "/v1/requests"
+      }
+    },
+    {
+      "case": "saltivka #1",
+      "status": 201,
+      "expected": 201,
+      "ok": true,
+      "instance": "app-b",
+      "location": "/v1/requests/8fce934d-6697-4d84-817a-f1f8e4a4f7dd",
+      "body": {
+        "id": "8fce934d-6697-4d84-817a-f1f8e4a4f7dd",
+        "district_id": "saltivka",
+        "address": "пр. Тракторобудівників, 1",
+        "kind": "escort",
+        "priority": 2,
+        "kits": 0,
+        "team_id": "saltivka-t1",
+        "status": "assigned",
+        "channel": "web",
+        "version": 1,
+        "created_at": "2026-11-19T14:13:08.004268+00:00",
+        "accept_deadline": "2026-11-19T14:23:08.004268+00:00"
+      }
+    },
+    {
+      "case": "saltivka #2",
+      "status": 201,
+      "expected": 201,
+      "ok": true,
+      "instance": "app-a",
+      "location": "/v1/requests/38e89dc9-ab13-4f57-b5d2-c2867d19cfc8",
+      "body": {
+        "id": "38e89dc9-ab13-4f57-b5d2-c2867d19cfc8",
+        "district_id": "saltivka",
+        "address": "пр. Тракторобудівників, 1",
+        "kind": "escort",
+        "priority": 2,
+        "kits": 0,
+        "team_id": "saltivka-t2",
+        "status": "assigned",
+        "channel": "web",
+        "version": 1,
+        "created_at": "2026-11-19T14:13:08.014461+00:00",
+        "accept_deadline": "2026-11-19T14:23:08.014461+00:00"
+      }
+    },
+    {
+      "case": "saltivka #3",
+      "status": 201,
+      "expected": 201,
+      "ok": true,
+      "instance": "app-b",
+      "location": "/v1/requests/f2c3f13a-9804-4e50-a8a4-de1c2cc52707",
+      "body": {
+        "id": "f2c3f13a-9804-4e50-a8a4-de1c2cc52707",
+        "district_id": "saltivka",
+        "address": "пр. Тракторобудівників, 1",
+        "kind": "escort",
+        "priority": 2,
+        "kits": 0,
+        "team_id": "saltivka-t3",
+        "status": "assigned",
+        "channel": "web",
+        "version": 1,
+        "created_at": "2026-11-19T14:13:08.025045+00:00",
+        "accept_deadline": "2026-11-19T14:23:08.025045+00:00"
+      }
+    },
+    {
+      "case": "saltivka #4 — команд немає",
+      "status": 409,
+      "expected": 409,
+      "ok": true,
+      "instance": "app-a",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/no-free-team",
+        "title": "No free team",
+        "status": 409,
+        "detail": "У районі немає вільної команди з потрібними наборами",
+        "instance": "/v1/requests"
+      }
+    },
+    {
+      "case": "пошкоджений курсор",
+      "status": 400,
+      "expected": 400,
+      "ok": true,
+      "instance": "app-a",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/bad-cursor",
+        "title": "Malformed cursor",
+        "status": 400,
+        "detail": "Курсор пошкоджено",
+        "instance": "/v1/requests"
+      }
+    },
+    {
+      "case": "limit = 51",
+      "status": 422,
+      "expected": 422,
+      "ok": true,
+      "instance": "app-b",
+      "location": null,
+      "body": {
+        "type": "https://example.edu/problems/invalid-request",
+        "title": "Invalid request data",
+        "status": 422,
+        "instance": "/v1/requests",
+        "errors": [
+          {
+            "field": "query.limit",
+            "message": "Input should be less than or equal to 50"
+          }
+        ]
+      }
+    }
+  ],
+  "listing": {
+    "pages": 11,
+    "items": 22,
+    "unique": 22,
+    "ordered_newest_first": true
+  }
+}
