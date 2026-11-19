@@ -1,0 +1,191 @@
+{
+  "summary": {
+    "district": "test-unprotected",
+    "requests": 10,
+    "states": {
+      "done": 6,
+      "rejected": 4
+    },
+    "teams_assigned": [
+      "test-unprotected-t1",
+      "test-unprotected-t3",
+      "test-unprotected-t2",
+      "test-unprotected-t2",
+      "test-unprotected-t1",
+      "test-unprotected-t3"
+    ],
+    "resource_before": {
+      "district": "test-unprotected",
+      "teams_total": 3,
+      "busy": 0,
+      "active_assignments": 0,
+      "teams_with_several_requests": [],
+      "invariant_ok": true
+    },
+    "resource_after": {
+      "district": "test-unprotected",
+      "teams_total": 3,
+      "busy": 3,
+      "active_assignments": 6,
+      "teams_with_several_requests": [
+        "test-unprotected-t1",
+        "test-unprotected-t2",
+        "test-unprotected-t3"
+      ],
+      "invariant_ok": false
+    },
+    "wall_s": 0.92
+  },
+  "requests": [
+    {
+      "id": "race-7087e4-00",
+      "accept_status": 202,
+      "state": "done",
+      "reason": null,
+      "team_id": "test-unprotected-t1",
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 2.2,
+        "processing": 329.6,
+        "delivery_wait": 11.4,
+        "total": 343.3
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-01",
+      "accept_status": 202,
+      "state": "done",
+      "reason": null,
+      "team_id": "test-unprotected-t3",
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 4.8,
+        "processing": 735.1,
+        "delivery_wait": 39.6,
+        "total": 779.5
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-02",
+      "accept_status": 202,
+      "state": "rejected",
+      "reason": "no free team in the district",
+      "team_id": null,
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 7.0,
+        "processing": 759.2,
+        "delivery_wait": 24.9,
+        "total": 791.1
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-03",
+      "accept_status": 202,
+      "state": "done",
+      "reason": null,
+      "team_id": "test-unprotected-t2",
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 5.6,
+        "processing": 577.6,
+        "delivery_wait": 86.8,
+        "total": 670.0
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-04",
+      "accept_status": 202,
+      "state": "done",
+      "reason": null,
+      "team_id": "test-unprotected-t2",
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 6.5,
+        "processing": 594.4,
+        "delivery_wait": 78.3,
+        "total": 679.3
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-05",
+      "accept_status": 202,
+      "state": "rejected",
+      "reason": "no free team in the district",
+      "team_id": null,
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 5.8,
+        "processing": 782.3,
+        "delivery_wait": 104.9,
+        "total": 893.0
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-06",
+      "accept_status": 202,
+      "state": "done",
+      "reason": null,
+      "team_id": "test-unprotected-t1",
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 5.5,
+        "processing": 348.0,
+        "delivery_wait": 108.1,
+        "total": 461.6
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-07",
+      "accept_status": 202,
+      "state": "rejected",
+      "reason": "no free team in the district",
+      "team_id": null,
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 9.8,
+        "processing": 778.0,
+        "delivery_wait": 103.5,
+        "total": 891.3
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-08",
+      "accept_status": 202,
+      "state": "done",
+      "reason": null,
+      "team_id": "test-unprotected-t3",
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 9.1,
+        "processing": 758.3,
+        "delivery_wait": 18.5,
+        "total": 785.9
+      },
+      "timings_ordered": true
+    },
+    {
+      "id": "race-7087e4-09",
+      "accept_status": 202,
+      "state": "rejected",
+      "reason": "no free team in the district",
+      "team_id": null,
+      "district": "test-unprotected",
+      "timings_ms": {
+        "queue_wait": 8.9,
+        "processing": 752.1,
+        "delivery_wait": 21.0,
+        "total": 782.1
+      },
+      "timings_ordered": true
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "clients": 30,
+  "seconds": 10.0,
+  "queue_capacity": 5,
+  "workers": 2,
+  "statuses": {
+    "202": 42,
+    "429": 3265
+  },
+  "responses_429_without_retry_after": 0,
+  "max_queue_length_seen": 5,
+  "health_samples": 230,
+  "health_p50_ms": 17.12,
+  "health_p95_ms": 23.62,
+  "health_max_ms": 44.01,
+  "rejected_counter_delta": 3265,
+  "full_ms_p50_p95_p99": [
+    1857.4,
+    2482.5,
+    2658.3
+  ]
+}
