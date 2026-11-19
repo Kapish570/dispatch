@@ -1,0 +1,46 @@
+{
+  "no_key": 400,
+  "replay": {
+    "first": [
+      201,
+      "app-a",
+      "b415e028-9d90-4c27-9207-b3c36e660ea1"
+    ],
+    "repeat": [
+      201,
+      "app-b",
+      "b415e028-9d90-4c27-9207-b3c36e660ea1"
+    ],
+    "same_body": true,
+    "requests_in_db": 1
+  },
+  "other_body": 422,
+  "in_progress": {
+    "status": 409,
+    "retry_after": "1",
+    "waited_s": 1.03
+  },
+  "concurrent_duplicates": {
+    "statuses": [
+      201,
+      201,
+      201,
+      201,
+      201
+    ],
+    "distinct_ids": 1,
+    "requests_in_db": 1
+  },
+  "lost_response": {
+    "first_attempt": "відповіді немає: RemoteProtocolError",
+    "retry_status": 201,
+    "retry_instance": "app-b",
+    "replayed": "true",
+    "request_id": "5345fc3f-c16d-4616-85c0-607f8214e35c",
+    "requests_in_db": 1
+  },
+  "purge": {
+    "inserted_expired": 1200,
+    "left_after_wait": 0
+  }
+}

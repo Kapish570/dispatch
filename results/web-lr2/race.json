@@ -1,0 +1,75 @@
+{
+  "n": 10,
+  "rounds": [
+    {
+      "201": 3,
+      "409": 7,
+      "other": [],
+      "instances": [
+        "app-a",
+        "app-b"
+      ],
+      "active_requests": 3,
+      "distinct_teams": 3,
+      "busy": 3,
+      "teams_total": 3,
+      "invariant_ok": true
+    },
+    {
+      "201": 3,
+      "409": 7,
+      "other": [],
+      "instances": [
+        "app-a",
+        "app-b"
+      ],
+      "active_requests": 3,
+      "distinct_teams": 3,
+      "busy": 3,
+      "teams_total": 3,
+      "invariant_ok": true
+    },
+    {
+      "201": 3,
+      "409": 7,
+      "other": [],
+      "instances": [
+        "app-a",
+        "app-b"
+      ],
+      "active_requests": 3,
+      "distinct_teams": 3,
+      "busy": 3,
+      "teams_total": 3,
+      "invariant_ok": true
+    },
+    {
+      "201": 3,
+      "409": 7,
+      "other": [],
+      "instances": [
+        "app-a",
+        "app-b"
+      ],
+      "active_requests": 3,
+      "distinct_teams": 3,
+      "busy": 3,
+      "teams_total": 3,
+      "invariant_ok": true
+    },
+    {
+      "201": 3,
+      "409": 7,
+      "other": [],
+      "instances": [
+        "app-a",
+        "app-b"
+      ],
+      "active_requests": 3,
+      "distinct_teams": 3,
+      "busy": 3,
+      "teams_total": 3,
+      "invariant_ok": true
+    }
+  ]
+}

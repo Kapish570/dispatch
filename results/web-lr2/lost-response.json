@@ -1,0 +1,8 @@
+{
+  "first_attempt": "відповіді немає: RemoteProtocolError",
+  "retry_status": 201,
+  "retry_instance": "app-b",
+  "replayed": "true",
+  "request_id": "5345fc3f-c16d-4616-85c0-607f8214e35c",
+  "requests_in_db": 1
+}
