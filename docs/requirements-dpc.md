@@ -14,3 +14,12 @@
 | ЛР1 | О1.4 | О | Захист спільного ресурсу | assign.py (`change_locked`, `change_unprotected`) | experiments/dpc_lr1_race.py | locked: 3 done / 7 rejected; unprotected: 4-8 done на 3 команди (results/dpc-lr1/) | done |
 | ЛР1 | О1.5 | О | Час виконання й метрики | assign.py (`Timing`), `/metrics` | experiments/dpc_lr1_queue_full.py | `queue_wait / processing / delivery_wait`, `queue_length`, `rejected`, перцентилі | done |
 
+## ЛР2
+
+| Lab | ID | Тип | Опис | Файли | Тести | Evidence | Status |
+|---|---|---|---|---|---|---|---|
+| ЛР2 | О2.1 | О | Паралельне інтегрування | dpc/api/app/integral.py, compute.py | experiments/dpc_lr2_accuracy.py | n = 10⁷: 327,0318500003, похибка ≤ 2,1·10⁻¹¹ < 10⁻⁶ для 1, 2, 4 процесів | done |
+| ЛР2 | О2.2 | О | Дослідження точності | experiments/dpc_lr2_accuracy.py | - | відношення похибок n і 2n: 4,00 (прямокутники, трапеції), 16,0 (Сімпсон) (results/dpc-lr2/accuracy.json) | done |
+| ЛР2 | О2.3 | О | Прискорення й причина обмеження | experiments/dpc_lr2_speedup.py | py-spy | 2 vCPU: S2 = 1,83, S4 = 1,85; 99 % часу в `part_sum` (results/dpc-lr2/speedup.json, pyspy-*.txt) | done |
+| ЛР2 | О2.4 | О | Спільна сума й локальні результати | integral.py (`mode`) | experiments/dpc_lr2_shared_sum.py | none: 193-279 замість 327,03; lock і local - похибка 1,6·10⁻⁹ (results/dpc-lr2/shared-sum.json) | done |
+
