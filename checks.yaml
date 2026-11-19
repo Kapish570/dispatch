@@ -1,0 +1,67 @@
+# Налаштування засобу check для спільного проєкту C30 (Web + DPC).
+web:
+  openapi: web/openapi.yaml
+  base: http://localhost:8080
+  items:
+    - О1.5   # список із курсором
+    - О1.6   # система, /health, журнал JSON
+    - О2.3   # повтор після втраченої відповіді
+    - О2.4   # повторні спроби в клієнті
+  role_names:
+    user: user
+    staff: staff
+  instances:
+    app-a: "http://localhost:8001"
+    app-b: "http://localhost:8002"
+  services:
+    nginx: nginx
+    app-a: app-a
+    app-b: app-b
+    postgres: postgres
+  log_fields:
+    time: time
+    instance: instance
+    route: route
+    status: status
+    duration: duration_ms
+dpc:
+  openapi: dpc/openapi.yaml
+  base: http://localhost:8000
+  items:
+    - О1.5   # час виконання й метрики
+    - О2.2   # дослідження точності
+  services:
+    api: dpc-api
+  resource:
+    path: /v1/district-teams/center
+    ok_field: invariant_ok
+  metrics:
+    - queue_length
+    - processing
+    - rejected
+  compute:
+    tolerance: 1.0e-6
+    bench_n: 20000000
+    modes:
+      param: mode
+      values: [none, lock, local]
+
+scenario:
+  - name: dpc-hotline-call
+    part: dpc
+    method: POST
+    path: /v1/assignment-requests
+    body:
+      request_id: "hl-{uuid}"
+      district: center
+      kind: medicine
+    status: 202
+    save: request
+  - name: dpc-state
+    part: dpc
+    method: GET
+    path: "/v1/assignment-requests/{request}"
+    status: 200
+    expect:
+      state: done
+    wait: 30

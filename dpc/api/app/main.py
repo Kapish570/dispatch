@@ -19,19 +19,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, db, middleware, problems, service
+from . import assign, config, db, middleware, problems, service
 from .jsonlog import log
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await db.open_pool()
-    # TODO (O1.2, O1.3): create the bounded queue and start the worker pool here
+    assign.start()  # О1.2, О1.3: обмежена черга й пул обробників
     log("api.started")
 
     yield
 
-    # TODO (D1.4): stop accepting, process what was accepted, then stop the workers
+    await assign.stop()
     await db.close_pool()
     log("api.stopped")
 
@@ -47,4 +47,4 @@ app.add_middleware(
 )
 problems.install(app)
 app.include_router(service.router)
-# app.include_router(your_module.router)
+app.include_router(assign.router)  # C30: черга гарячої лінії (ЛР1)
