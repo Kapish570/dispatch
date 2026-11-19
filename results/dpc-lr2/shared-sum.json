@@ -1,0 +1,87 @@
+{
+  "n": 400000,
+  "workers": 4,
+  "rows": [
+    {
+      "mode": "none",
+      "run": 1,
+      "value": 193.342680650965,
+      "reference": 327.0318500002785,
+      "error": -133.6891693493135,
+      "within_tolerance": false,
+      "compute_s": 0.0563
+    },
+    {
+      "mode": "none",
+      "run": 2,
+      "value": 264.5692079245656,
+      "reference": 327.0318500002785,
+      "error": -62.46264207571289,
+      "within_tolerance": false,
+      "compute_s": 0.0664
+    },
+    {
+      "mode": "none",
+      "run": 3,
+      "value": 279.3855582246927,
+      "reference": 327.0318500002785,
+      "error": -47.64629177558578,
+      "within_tolerance": false,
+      "compute_s": 0.0622
+    },
+    {
+      "mode": "lock",
+      "run": 1,
+      "value": 327.0318500018581,
+      "reference": 327.0318500002785,
+      "error": 1.579621766722994e-09,
+      "within_tolerance": true,
+      "compute_s": 0.8065
+    },
+    {
+      "mode": "lock",
+      "run": 2,
+      "value": 327.03185000185186,
+      "reference": 327.0318500002785,
+      "error": 1.573368990648305e-09,
+      "within_tolerance": true,
+      "compute_s": 0.6953
+    },
+    {
+      "mode": "lock",
+      "run": 3,
+      "value": 327.0318500018574,
+      "reference": 327.0318500002785,
+      "error": 1.5788828022778034e-09,
+      "within_tolerance": true,
+      "compute_s": 0.7833
+    },
+    {
+      "mode": "local",
+      "run": 1,
+      "value": 327.0318500018613,
+      "reference": 327.0318500002785,
+      "error": 1.5828049981791992e-09,
+      "within_tolerance": true,
+      "compute_s": 0.0708
+    },
+    {
+      "mode": "local",
+      "run": 2,
+      "value": 327.0318500018613,
+      "reference": 327.0318500002785,
+      "error": 1.5828049981791992e-09,
+      "within_tolerance": true,
+      "compute_s": 0.0715
+    },
+    {
+      "mode": "local",
+      "run": 3,
+      "value": 327.0318500018613,
+      "reference": 327.0318500002785,
+      "error": 1.5828049981791992e-09,
+      "within_tolerance": true,
+      "compute_s": 0.0768
+    }
+  ]
+}

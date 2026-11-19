@@ -1,0 +1,196 @@
+{
+  "n": 10000000,
+  "repeats": 3,
+  "rows": [
+    {
+      "workers": 1,
+      "processes": 1,
+      "compute_s": [
+        2.3046,
+        1.851,
+        1.866
+      ],
+      "wall_s": [
+        2.3826,
+        1.8746,
+        1.8843
+      ],
+      "median_compute_s": 1.866,
+      "median_wall_s": 1.8843,
+      "spread_compute_s": 0.4536,
+      "pool_start_s_median": 0.0216,
+      "max_abs_error": 1.1254996934439987e-11,
+      "all_within_tolerance": true,
+      "value": 327.03185000028975,
+      "reference": 327.0318500002785,
+      "parts_profile_last": [
+        {
+          "cpu_s": 1.853,
+          "wall_s": 1.8652,
+          "pid": 2168
+        }
+      ],
+      "cores_available": 2,
+      "S_compute": 1.0,
+      "E_compute": 1.0,
+      "S_wall": 1.0,
+      "E_wall": 1.0,
+      "cpu_share_of_parts": [
+        0.99
+      ]
+    },
+    {
+      "workers": 2,
+      "processes": 2,
+      "compute_s": [
+        0.9721,
+        1.018,
+        1.0305
+      ],
+      "wall_s": [
+        0.994,
+        1.0404,
+        1.0506
+      ],
+      "median_compute_s": 1.018,
+      "median_wall_s": 1.0404,
+      "spread_compute_s": 0.0584,
+      "pool_start_s_median": 0.0199,
+      "max_abs_error": 2.063416104647331e-11,
+      "all_within_tolerance": true,
+      "value": 327.03185000025786,
+      "reference": 327.0318500002785,
+      "parts_profile_last": [
+        {
+          "cpu_s": 0.8847,
+          "wall_s": 0.9264,
+          "pid": 2179
+        },
+        {
+          "cpu_s": 1.0032,
+          "wall_s": 1.0236,
+          "pid": 2182
+        }
+      ],
+      "cores_available": 2,
+      "S_compute": 1.833,
+      "E_compute": 0.916,
+      "S_wall": 1.811,
+      "E_wall": 0.905,
+      "cpu_share_of_parts": [
+        0.95,
+        0.98
+      ]
+    },
+    {
+      "workers": 4,
+      "processes": 4,
+      "compute_s": [
+        1.0091,
+        0.9264,
+        1.0097
+      ],
+      "wall_s": [
+        1.0502,
+        0.9482,
+        1.0326
+      ],
+      "median_compute_s": 1.0091,
+      "median_wall_s": 1.0326,
+      "spread_compute_s": 0.0833,
+      "pool_start_s_median": 0.0202,
+      "max_abs_error": 3.069544618483633e-12,
+      "all_within_tolerance": true,
+      "value": 327.03185000028157,
+      "reference": 327.0318500002785,
+      "parts_profile_last": [
+        {
+          "cpu_s": 0.5668,
+          "wall_s": 1.0049,
+          "pid": 2199
+        },
+        {
+          "cpu_s": 0.5376,
+          "wall_s": 0.9913,
+          "pid": 2196
+        },
+        {
+          "cpu_s": 0.4304,
+          "wall_s": 0.8668,
+          "pid": 2200
+        },
+        {
+          "cpu_s": 0.4294,
+          "wall_s": 0.8622,
+          "pid": 2201
+        }
+      ],
+      "cores_available": 2,
+      "S_compute": 1.849,
+      "E_compute": 0.462,
+      "S_wall": 1.825,
+      "E_wall": 0.456,
+      "cpu_share_of_parts": [
+        0.56,
+        0.54,
+        0.5,
+        0.5
+      ]
+    }
+  ],
+  "hypothesis_4parts_2processes": {
+    "workers": 4,
+    "processes": 2,
+    "compute_s": [
+      0.8458,
+      1.1164,
+      1.0527
+    ],
+    "wall_s": [
+      0.8663,
+      1.1355,
+      1.0736
+    ],
+    "median_compute_s": 1.0527,
+    "median_wall_s": 1.0736,
+    "spread_compute_s": 0.2706,
+    "pool_start_s_median": 0.0186,
+    "max_abs_error": 3.069544618483633e-12,
+    "all_within_tolerance": true,
+    "value": 327.03185000028157,
+    "reference": 327.0318500002785,
+    "parts_profile_last": [
+      {
+        "cpu_s": 0.5562,
+        "wall_s": 0.5585,
+        "pid": 2211
+      },
+      {
+        "cpu_s": 0.4762,
+        "wall_s": 0.4785,
+        "pid": 2214
+      },
+      {
+        "cpu_s": 0.3702,
+        "wall_s": 0.3711,
+        "pid": 2214
+      },
+      {
+        "cpu_s": 0.4896,
+        "wall_s": 0.4921,
+        "pid": 2211
+      }
+    ],
+    "cores_available": 2,
+    "S_compute": 1.773,
+    "E_compute": 0.886,
+    "S_wall": 1.755,
+    "E_wall": 0.877,
+    "cpu_share_of_parts": [
+      1.0,
+      1.0,
+      1.0,
+      0.99
+    ]
+  }
+}
