@@ -16,7 +16,7 @@
 Автори:
 - Малюта Артем, ст. гр. ІТІН-23-2.
 
-Виконано: ЛР1 обох дисциплін.
+Виконано: ЛР1 обох дисциплін, Web ЛР2.
 
 ## 2. Проєкт
 
@@ -304,7 +304,37 @@ sequenceDiagram
 
 | Пункт | Де реалізовано | Перевірка та свідчення |
 |---|---|---|
-| | | |
+| О2.1. Інваріант за одночасних запитів | `assign_team()` — блокування рядка `district_teams` + унікальний індекс | 5 раундів «10 заявок на 3 команди» через app-a й app-b: щоразу 3×201, 7×409, 3 різні команди, busy = 3 — `results/web-lr2/race.json` |
+| О2.2. Механізм ідемпотентності | `web/server/app/idempotency.py`, `migrations/003_idempotency.sql` | Без ключа — 400; повтор через інший екземпляр — та сама відповідь; інше тіло — 422; ключ обробляється — 409 з Retry-After; 5 одночасних дублікатів — одна заявка; 1200 прострочених ключів прибрано порціями по 500 |
+| О2.3. Повтор після втраченої відповіді | `fault("after_commit_before_response")` | Повтор через app-b повертає збережений 201, заявка одна — `results/web-lr2/lost-response.json` |
+| О2.4. Повторні спроби в клієнті | `web/client/api.js::callWithRetry`, `web/client/tests/retry.test.mjs` | Аварія → 502 → повтор із тим самим ключем → збережений 201; сервер недоступний → «результат невідомий» (рисунок 2) |
+
+Докладно: [results/web-lr2/README.md](results/web-lr2/README.md).
+
+**Чому блокування рядка (О2.1).** Правило «є вільна команда району» стосується кількох рядків
+(лічильник району й команди), тому атомарний умовний `UPDATE` одного рядка його не охоплює, а
+серіалізовна транзакція вимагала б повторів. `SELECT … FOR UPDATE` рядка `district_teams`
+серіалізує призначення лише в межах району й однаково працює з обох екземплярів Web і з DPC.
+
+```mermaid
+sequenceDiagram
+    participant C as Клієнт
+    participant A as app-a
+    participant B as app-b
+    participant P as PostgreSQL
+    C->>A: POST /v1/requests (Idempotency-Key: K)
+    A->>P: INSERT ключ K + заявка + відповідь, COMMIT
+    Note over A: аварія after_commit_before_response
+    A--xC: відповіді немає (502)
+    C->>B: повтор (той самий ключ K)
+    B->>P: INSERT ключ K — конфлікт
+    P-->>B: збережена відповідь
+    B-->>C: 201 (Idempotent-Replayed: true), заявка одна
+```
+
+![Повтор у клієнті](results/web-lr2/web-client-retry-0.png)
+
+*Рисунок 2 — перша спроба втрачена через аварію, повтор із тим самим ключем повернув збережений результат.*
 
 #### ЛР3. Вхід і доступ
 
@@ -406,6 +436,9 @@ flowchart LR
 | Дослід | Режим і команда | Що видно / посилання на результат |
 |---|---|---|
 | Сценарій Web ЛР1 | `python experiments/web_lr1_scenario.py` | 14/14 перевірок, усі сторінки списку без пропусків і повторів — `results/web-lr1/scenario.json` |
+| 10 заявок на 3 команди (Web О2.1) | `python experiments/web_lr2_race.py --rounds 5` | Щоразу 3×201, 7×409, обидва екземпляри — `results/web-lr2/race.json` |
+| Ідемпотентність (Web О2.2–О2.3) | `python experiments/web_lr2_idempotency.py` | 400 / 201+replay / 422 / 409 / одна заявка на 5 дублікатів; після аварії app-a повтор через app-b — збережений 201 |
+| Повтори клієнта (Web О2.4) | `node web/client/tests/retry.test.mjs` | 502 → 201 з тим самим ключем; «результат невідомий» після 4 спроб — `results/web-lr2/client-retry.txt` |
 | 10 дзвінків на 3 команди (DPC О1.4) | `WORKERS=10`; `python experiments/dpc_lr1_race.py --district test-race`, потім `RESOURCE_MODE=unprotected` і `--district test-unprotected` | locked: 3/7 у 3 запусках; unprotected: 4, 8, 6 призначень на 3 команди |
 | Заповнена черга (DPC О1.2) | `QUEUE_CAPACITY=5 WORKERS=2`; `python experiments/dpc_lr1_queue_full.py --clients 30 --seconds 10` | 42×202, 3265×429 (усі з Retry-After), max черга 5, `/health` p50 17,1 мс, p95 23,6 мс |
 
@@ -413,13 +446,21 @@ flowchart LR
 
 ## 8. Межі гарантій і керовані відмови
 
-Буде заповнено після виконання дослідів.
+Керовану відмову Web ЛР2 `after_commit_before_response` увімкнено; підсумок меж - після виконання решти дослідів.
+
+Керована відмова Web ЛР2 `after_commit_before_response`:
+
+| Дія | Команда |
+|---|---|
+| Увімкнення | `docker compose exec app-a touch /faults/after_commit_before_response` |
+| Перевірка спрацювання | `docker compose logs app-a \| grep fault.hit` |
+| Відновлення | Docker перезапускає процес (`restart: unless-stopped`); прапорець одноразовий |
 
 ## 9. Внесок учасників
 
 | Учасник | Реалізовані пункти й виконані досліди |
 |---|---|
-| Малюта Артем | Web ЛР1 (О1.1-О1.7, Д1.1), DPC ЛР1 (О1.1-О1.5) |
+| Малюта Артем | Web ЛР1 (О1.1-О1.7, Д1.1), Web ЛР2 (О2.1-О2.4), DPC ЛР1 (О1.1-О1.5) |
 
 ### Використані бібліотеки
 

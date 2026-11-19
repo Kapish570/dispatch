@@ -17,3 +17,12 @@
 | ЛР1 | О1.7 | О | Клієнт | web/client/ | вручну в браузері | знімки results/web-lr1/*.png | done |
 | ЛР1 | Д1.1 | Д | Правило за часом - чиста функція | web/server/app/timerules.py | web/server/tests/test_timerules.py | 5 тестів: межа строку, зона | done |
 
+## ЛР2
+
+| Lab | ID | Тип | Опис | Файли | Тести | Evidence | Status |
+|---|---|---|---|---|---|---|---|
+| ЛР2 | О2.1 | О | Інваріант за одночасних запитів | migrations/001_core.sql (`assign_team`) | experiments/web_lr2_race.py | 5 раундів 10 заявок на 3 команди через app-a й app-b: 3×201, 7×409 (results/web-lr2/race.json) | done |
+| ЛР2 | О2.2 | О | Механізм ідемпотентності | web/server/app/idempotency.py, migrations/003_idempotency.sql | experiments/web_lr2_idempotency.py | 400 / повтор / 422 / 409 / одна заявка на 5 дублікатів; очищення порціями (results/web-lr2/idempotency.json) | done |
+| ЛР2 | О2.3 | О | Повтор після втраченої відповіді | fault `after_commit_before_response` | experiments/web_lr2_idempotency.py | повтор через app-b - збережений 201, заявка одна (results/web-lr2/lost-response.json) | done |
+| ЛР2 | О2.4 | О | Повторні спроби в клієнті | web/client/api.js | web/client/tests/retry.test.mjs | 502 → 201 з тим самим ключем; «результат невідомий» (results/web-lr2/client-retry.txt) | done |
+
