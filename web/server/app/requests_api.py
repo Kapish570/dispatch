@@ -1,6 +1,7 @@
 """Заявки на допомогу (картка C30, частина Web): головна операція й список із курсором.
 
-POST /v1/requests — подати заявку й одразу призначити вільну команду району (О1.4).
+POST /v1/requests — подати заявку й одразу призначити вільну команду району (О1.4);
+                    обов'язковий Idempotency-Key (О2.2), керована відмова (О2.3).
 GET  /v1/requests — мої заявки від найновіших, курсор за парою (created_at, id) (О1.5).
 GET  /v1/requests/{id} — одна заявка; чужа й відсутня дають однаковий 404.
 
@@ -16,9 +17,11 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import db, timerules
+from . import db, idempotency, timerules
+from .faults import fault
 from .jsonlog import log
 from .problems import Problem
 
@@ -81,23 +84,43 @@ async def me(user: User) -> dict[str, Any]:
     return user
 
 
+OPERATION = "POST /v1/requests"
+
+
 @router.post("/requests", status_code=201)
-async def create_request(body: RequestCreate, user: User, response: Response) -> dict[str, Any]:
-    """Головна операція. Перевірка й зміна ресурсу (команда, лічильник району) та запис заявки —
-    одна транзакція; відповідь 201 надсилається лише після фіксації."""
+async def create_request(
+    body: RequestCreate,
+    user: User,
+    response: Response,
+    idempotency_key: Annotated[str | None, Header()] = None,
+) -> Any:
+    """Головна операція. Ключ ідемпотентності, перевірка й зміна ресурсу (команда, лічильник району),
+    запис заявки та збереження відповіді — одна транзакція; 201 надсилається лише після фіксації."""
+    key = idempotency.require_key(idempotency_key)
+    fp = idempotency.fingerprint(body.model_dump())
     request_id = str(uuid.uuid4())
 
     async with db.connection() as conn:
         async with conn.transaction():
+            saved = await idempotency.begin(conn, user["id"], OPERATION, key, fp)
+            if saved is not None:
+                # повтор: та сама відповідь, предметна зміна вдруге не виконується
+                log("request.replayed", key=key, request=saved["response_body"].get("id"))
+                return JSONResponse(saved["response_body"], status_code=saved["status_code"],
+                                    headers={**saved["response_headers"], "Idempotent-Replayed": "true"})
+
             cur = await conn.execute("SELECT now() AS now FROM district WHERE id = %s", (body.district_id,))
             found = await cur.fetchone()
             if found is None:
                 raise Problem(404, "district-not-found", "District not found", f"Району {body.district_id} немає")
 
+            # Інваріант за одночасних запитів (О2.1): assign_team() блокує рядок district_teams
+            # (SELECT ... FOR UPDATE) — запити обох екземплярів до одного району виконують
+            # перевірку й зміну по черзі; додатковий захист — унікальний індекс активної заявки команди.
             cur = await conn.execute("SELECT assign_team(%s, %s) AS team_id", (body.district_id, body.kits))
             team_id = (await cur.fetchone())["team_id"]
             if team_id is None:
-                # Problem усередині блока transaction() — відкат усієї транзакції
+                # Problem усередині блока transaction() — відкат усієї транзакції (разом із ключем)
                 raise Problem(409, "no-free-team", "No free team", "У районі немає вільної команди з потрібними наборами")
 
             created_at: datetime = found["now"]  # now() — час початку транзакції
@@ -114,12 +137,15 @@ async def create_request(body: RequestCreate, user: User, response: Response) ->
                 ),
             )
             row = await cur.fetchone()
+            result = to_json(row)
+            headers = {"Location": f"/v1/requests/{request_id}", "ETag": etag(row)}
+            await idempotency.complete(conn, user["id"], OPERATION, key, 201, result, headers)
         # тут транзакцію вже зафіксовано
 
-    log("request.assigned", request=request_id, team=team_id, district=body.district_id)
-    response.headers["Location"] = f"/v1/requests/{request_id}"
-    response.headers["ETag"] = etag(row)
-    return to_json(row)
+    fault("after_commit_before_response")  # О2.3: аварія між фіксацією й відповіддю
+    log("request.assigned", request=request_id, team=team_id, district=body.district_id, key=key)
+    response.headers.update(headers)
+    return result
 
 
 def encode_cursor(row: dict[str, Any]) -> str:

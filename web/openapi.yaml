@@ -5,7 +5,7 @@
 openapi: 3.1.0
 info:
   title: Диспетчерська допомоги — Web
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Люди подають заявки на допомогу (доставка ліків, супровід); система одразу призначає
     вільну волонтерську команду району. Інваріант — команда виконує одну заявку.
@@ -141,7 +141,13 @@ paths:
         заявки виконуються в одній транзакції; 201 надсилається лише після фіксації.
         Команда має підтвердити призначення до `accept_deadline` = `created_at` + 10 хв
         (рівно на межі заявка переходить іншій команді).
+
+        Ідемпотентність (ЛР2): ключ, відбиток тіла, стан і відповідь зберігаються в тій самій
+        транзакції. Повтор із тим самим тілом — та сама відповідь (заголовок `Idempotent-Replayed: true`),
+        з іншим тілом — 422, ключ ще обробляється — 409 з `Retry-After`.
       x-course: main
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -246,6 +252,16 @@ components:
       required: true
       schema:
         type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Ключ ідемпотентності (немає — 400). Однаковий в усіх спробах того самого запиту
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+      example: 7d1f3a52-4c0e-4b8e-9f61-0a2b3c4d5e6f
     Cursor:
       name: cursor
       in: query
@@ -349,7 +365,7 @@ components:
           format: date-time
   responses:
     BadRequest:
-      description: Пошкоджений JSON або курсор
+      description: Пошкоджений JSON або курсор, немає Idempotency-Key
       content:
         application/problem+json:
           schema:
@@ -378,7 +394,11 @@ components:
             detail: Району no-such-district немає
             instance: /v1/requests
     Conflict:
-      description: Ресурсу не вистачає — у районі немає вільної команди
+      description: Ресурсу не вистачає — у районі немає вільної команди; або запит із цим ключем ще обробляється
+      headers:
+        Retry-After:
+          schema:
+            type: integer
       content:
         application/problem+json:
           schema:
@@ -390,7 +410,7 @@ components:
             detail: У районі немає вільної команди з потрібними наборами
             instance: /v1/requests
     Unprocessable:
-      description: Неправильні дані
+      description: Неправильні дані або той самий ключ ідемпотентності з іншим тілом
       content:
         application/problem+json:
           schema:

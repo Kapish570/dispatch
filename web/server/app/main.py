@@ -11,22 +11,26 @@ Your work goes into new modules that you include below. Where each lab plugs in:
 The contract of all routes is your openapi.yaml (start from openapi.example.yaml).
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import cache, config, db, metrics, middleware, problems, requests_api, service, telemetry
+from . import cache, config, db, idempotency, metrics, middleware, problems, requests_api, service, telemetry
 from .jsonlog import log
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await db.open_pool()
+    purge = asyncio.create_task(idempotency.purge_loop())  # О2.2: прибирання прострочених ключів
 
     log("app.started")
     yield
+
+    purge.cancel()
 
     await cache.close()
     await db.close_pool()
@@ -42,7 +46,7 @@ app.add_middleware(
     allow_origins=[config.CLIENT_ORIGIN],
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type", "X-User-Id", "Idempotency-Key", "If-Match", "X-Request-ID"],
-    expose_headers=["Location", "ETag", "Retry-After", "X-Request-ID", "X-Instance"],
+    expose_headers=["Location", "ETag", "Retry-After", "X-Request-ID", "X-Instance", "Idempotent-Replayed"],
 )
 middleware.install(app)  # додано після CORS — зовнішній: X-Request-ID має і відповідь на OPTIONS
 problems.install(app)

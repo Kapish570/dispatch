@@ -69,7 +69,7 @@
     </table>
 
     <script type="module">
-        import {call, getUser, listAll, Problem, setUser} from "./api.js";
+        import {callWithRetry, getUser, listAll, newKey, Problem, setUser, UnknownResult} from "./api.js";
 
         const out = document.getElementById("out");
         const zone = {timeZone: "Europe/Kyiv", dateStyle: "short", timeStyle: "medium"};
@@ -82,6 +82,10 @@
 
         // Помилка у форматі Problem Details: показуємо title, detail і поля помилок.
         const report = (error) => {
+            if (error instanceof UnknownResult) {
+                return show(`Результат невідомий: після ${error.attempts} спроб відповіді не отримано.\n` +
+                            "Заявка могла бути створена — перевірте список «Мої заявки».", true);
+            }
             if (!(error instanceof Problem)) return show(`Немає зв'язку з сервером: ${error}`, true);
             const b = error.body ?? {};
             const lines = [`Помилка ${error.status}: ${b.title ?? ""}`];
@@ -104,12 +108,19 @@
                 priority: Number(form.get("priority")),
                 kits: Number(form.get("kits")),
             };
+            // Ключ створюється один раз на подання форми й однаковий у всіх спробах (О2.4).
+            const key = newKey();
+            const attempts = [];
             try {
-                const {status, headers, data} = await call("POST", "/v1/requests", {body});
+                const {status, headers, data} = await callWithRetry("POST", "/v1/requests", {
+                    body, key, onAttempt: (a) => { attempts.push(`спроба ${a.attempt}: ${a.status}`); show(attempts.join("\n")); },
+                });
                 // Невідомі додаткові поля відповіді просто ігноруються: читаємо лише відомі.
                 show(`${status}: заявку прийнято, призначено команду ${data.team_id}\n` +
                      `Стан: ${data.status}; підтвердити до ${fmt(data.accept_deadline)}\n` +
-                     `Location: ${headers.get("location")}`);
+                     `Location: ${headers.get("location")}\n` +
+                     `Idempotency-Key: ${key}; ${attempts.join(", ")}` +
+                     (headers.get("idempotent-replayed") ? " (повернуто збережений результат)" : ""));
                 await refresh();
             } catch (error) {
                 report(error);
