@@ -1,0 +1,415 @@
+# Контракт частини Web теми C30 «Диспетчерська допомоги» (OpenAPI 3.1).
+# x-course — роль маршруту для засобу check: main, list, object.
+# Приклади тіл головної операції: normal, scarce (x-capacity: 3 — район із трьома командами), missing (404).
+# Значення прикладів існують у тестових даних migrations/900_seed.sql.
+openapi: 3.1.0
+info:
+  title: Диспетчерська допомоги — Web
+  version: 1.0.0
+  description: |
+    Люди подають заявки на допомогу (доставка ліків, супровід); система одразу призначає
+    вільну волонтерську команду району. Інваріант — команда виконує одну заявку.
+
+    Помилки — Problem Details (RFC 9457, `application/problem+json`). Ідентифікатори — рядки.
+    Моменти часу — RFC 3339 зі зміщенням; клієнт показує їх у зоні області (Europe/Kyiv).
+    До ЛР3 користувача визначає заголовок `X-User-Id`.
+servers:
+  - url: http://localhost:8080
+security:
+  - userHeader: []
+
+tags:
+  - name: service
+    description: Службові маршрути
+  - name: requests
+    description: Заявки на допомогу
+
+paths:
+  /health:
+    get:
+      tags: [service]
+      operationId: getHealth
+      summary: Перевірка живучості процесу, без звернення до бази
+      security: []
+      responses:
+        "200":
+          description: Процес відповідає
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  instance:
+                    type: string
+              example:
+                status: ok
+                instance: app-a
+  /ready:
+    get:
+      tags: [service]
+      operationId: getReady
+      summary: Готовність приймати запити (база доступна, процес не завершується)
+      security: []
+      responses:
+        "200":
+          description: Готовий
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /v1/me:
+    get:
+      tags: [service]
+      operationId: getMe
+      summary: Поточний користувач і роль
+      responses:
+        "200":
+          description: Користувач
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, role]
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  role:
+                    type: string
+                    enum: [user, staff]
+              example:
+                id: u-applicant-1
+                name: Олена Коваль
+                role: user
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/requests:
+    get:
+      tags: [requests]
+      operationId: listRequests
+      summary: Мої заявки, від найновіших (порядок за парою created_at, id)
+      x-course: list
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Сторінка списку
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HelpRequest"
+                  next_cursor:
+                    type: [string, "null"]
+                    description: Непрозорий курсор наступної сторінки; null — остання сторінка
+              example:
+                items:
+                  - id: 3f6c0b4e-8d1a-4c7e-9a52-6b1f0e2d7a90
+                    district_id: center
+                    address: вул. Сумська, 10, кв. 5
+                    kind: medicine
+                    priority: 1
+                    kits: 2
+                    team_id: center-t001
+                    status: assigned
+                    channel: web
+                    version: 1
+                    created_at: "2026-11-19T13:57:52.830605+00:00"
+                    accept_deadline: "2026-11-19T14:07:52.830605+00:00"
+                next_cursor: eyJ0IjoiMjAyNi0xMS0xOVQxMzo1Nzo1Mi44MzA2MDUrMDA6MDAiLCJpZCI6IjNmNmMifQ
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+    post:
+      tags: [requests]
+      operationId: createRequest
+      summary: Подати заявку й призначити вільну команду району (головна операція)
+      description: |
+        Перевірка наявності вільної команди, зміна ресурсу (команда й лічильник району) і запис
+        заявки виконуються в одній транзакції; 201 надсилається лише після фіксації.
+        Команда має підтвердити призначення до `accept_deadline` = `created_at` + 10 хв
+        (рівно на межі заявка переходить іншій команді).
+      x-course: main
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HelpRequestCreate"
+            examples:
+              normal:
+                summary: Район, де вільних команд достатньо
+                value:
+                  district_id: center
+                  address: вул. Сумська, 10, кв. 5
+                  kind: medicine
+                  priority: 1
+                  kits: 2
+              scarce:
+                summary: Район із трьома командами — для досліду «10 заявок на 3 команди»
+                value:
+                  district_id: saltivka
+                  address: пр. Тракторобудівників, 1
+                  kind: escort
+                x-capacity: 3
+              missing:
+                summary: Такого району немає — 404
+                value:
+                  district_id: no-such-district
+                  address: вул. Невідома, 1
+                  kind: food
+      responses:
+        "201":
+          description: Заявку створено, команду призначено
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /v1/requests/3f6c0b4e-8d1a-4c7e-9a52-6b1f0e2d7a90
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpRequest"
+              example:
+                id: 3f6c0b4e-8d1a-4c7e-9a52-6b1f0e2d7a90
+                district_id: center
+                address: вул. Сумська, 10, кв. 5
+                kind: medicine
+                priority: 1
+                kits: 2
+                team_id: center-t001
+                status: assigned
+                channel: web
+                version: 1
+                created_at: "2026-11-19T13:57:52.830605+00:00"
+                accept_deadline: "2026-11-19T14:07:52.830605+00:00"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Unprocessable"
+  /v1/requests/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [requests]
+      operationId: getRequest
+      summary: Одна заявка (чужа й відсутня — однаковий 404)
+      x-course: object
+      responses:
+        "200":
+          description: Заявка
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    userHeader:
+      type: apiKey
+      in: header
+      name: X-User-Id
+      description: До ЛР3 — ідентифікатор заздалегідь створеного користувача (u-applicant-1, u-applicant-2, u-dispatcher)
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Непрозорий курсор із `next_cursor` попередньої сторінки; пошкоджений — 400
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    HelpRequestCreate:
+      type: object
+      additionalProperties: false
+      required: [district_id, address, kind]
+      properties:
+        district_id:
+          type: string
+          maxLength: 64
+        address:
+          type: string
+          minLength: 3
+          maxLength: 300
+        kind:
+          type: string
+          enum: [medicine, escort, food, other]
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 3
+          default: 2
+          description: 1 — терміново, 3 — звичайний
+        kits:
+          type: integer
+          minimum: 0
+          maximum: 20
+          default: 0
+          description: Кількість наборів допомоги (цілі); видається не більше, ніж є на складі команди
+    HelpRequest:
+      type: object
+      required: [id, district_id, address, kind, priority, kits, status, channel, version, created_at]
+      properties:
+        id:
+          type: string
+        district_id:
+          type: string
+        address:
+          type: string
+        kind:
+          type: string
+          enum: [medicine, escort, food, other]
+        priority:
+          type: integer
+        kits:
+          type: integer
+        team_id:
+          type: [string, "null"]
+        status:
+          type: string
+          enum: [new, assigned, on_way, done, cancelled]
+        channel:
+          type: string
+          enum: [web, hotline]
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        accept_deadline:
+          type: [string, "null"]
+          format: date-time
+  responses:
+    BadRequest:
+      description: Пошкоджений JSON або курсор
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://example.edu/problems/malformed-json
+            title: Request body is not valid JSON
+            status: 400
+            instance: /v1/requests
+    Unauthorized:
+      description: Користувача не визначено
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Не знайдено (або чужий об'єкт)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://example.edu/problems/district-not-found
+            title: District not found
+            status: 404
+            detail: Району no-such-district немає
+            instance: /v1/requests
+    Conflict:
+      description: Ресурсу не вистачає — у районі немає вільної команди
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://example.edu/problems/no-free-team
+            title: No free team
+            status: 409
+            detail: У районі немає вільної команди з потрібними наборами
+            instance: /v1/requests
+    Unprocessable:
+      description: Неправильні дані
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://example.edu/problems/invalid-request
+            title: Invalid request data
+            status: 422
+            instance: /v1/requests
+            errors:
+              - field: body.kind
+                message: Input should be 'medicine', 'escort', 'food' or 'other'
+    Unavailable:
+      description: Тимчасово недоступно
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

@@ -1,0 +1,10 @@
+# Лінтер контрактів: npx @redocly/cli lint web/openapi.yaml dpc/openapi.yaml
+extends:
+  - recommended
+rules:
+  info-license: off              # навчальний проєкт
+  no-server-example.com: off     # сервер — localhost за compose.yaml
+  operation-4xx-response: off    # /health і /ready не мають 4xx
+  no-invalid-media-type-examples:
+    severity: warn
+    allowAdditionalProperties: false
