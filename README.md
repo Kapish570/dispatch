@@ -16,7 +16,7 @@
 Автори:
 - Малюта Артем, ст. гр. ІТІН-23-2.
 
-Виконано: Web О1.1.
+Виконано: Web ЛР1.
 
 ## 2. Проєкт
 
@@ -221,13 +221,15 @@ python experiments/web_lr1_scenario.py
 | Пункт | Де реалізовано | Перевірка та свідчення |
 |---|---|---|
 | О1.1. Модель предметної області | розділ нижче, [docs/decisions.md](docs/decisions.md) | Описано сутності, стани, дозволені переходи, інваріанти та числові навчальні припущення |
-| О1.2. Схема бази даних | - | - |
-| О1.3. Контракт API | - | - |
-| О1.4. Головна операція | - | - |
-| О1.5. Список із курсором | - | - |
-| О1.6. Система, перевірка живучості й журнал | - | - |
-| О1.7. Клієнт | - | - |
-| Д1.1. Правило за часом | - | - |
+| О1.2. Схема бази даних | `migrations/001_core.sql` | PK/FK, NOT NULL, CHECK, UNIQUE, частковий унікальний індекс інваріанта, `timestamptz` |
+| О1.3. Контракт API | `web/openapi.yaml` | `npx @redocly/cli lint web/openapi.yaml` — valid; приклади normal/scarce/missing |
+| О1.4. Головна операція | `web/server/app/requests_api.py` | Транзакція: район → `assign_team` → INSERT; 201 + Location після фіксації; 400/422/404/409 — `results/web-lr1/scenario.json` (14/14) |
+| О1.5. Список із курсором | `requests_api.py::list_requests` | Порядок `(created_at, id)`, limit 1–50, непрозорий курсор, пошкоджений — 400; читання сторінками без пропусків і повторів |
+| О1.6. Система, перевірка живучості й журнал | `compose.yaml`, `configs/nginx/`, `middleware.py` | `/health` на кожному екземплярі; `X-Request-ID`; рядок JSON із time, instance, route, status, duration_ms |
+| О1.7. Клієнт | `web/client/` | Подання заявки, показ команди, Problem Details, читання всіх сторінок (рисунок 1) |
+| Д1.1. Правило за часом | `timerules.py`, `web/server/tests/` | 5 тестів: межа строку, зміщення зони |
+
+Докладно: [results/web-lr1/README.md](results/web-lr1/README.md).
 
 ##### О1.1. Модель предметної області
 
@@ -275,6 +277,28 @@ stateDiagram-v2
 | Команди | `center` — 500; `saltivka`, `test-race`, `test-unprotected` — по 3 |
 
 Атрибути сутностей, ER-діаграма та правила переходів: [docs/decisions.md](docs/decisions.md), розділ «Модель предметної області».
+
+##### О1.4. Головна операція
+
+```mermaid
+sequenceDiagram
+    participant C as Клієнт
+    participant N as nginx
+    participant A as app-a / app-b
+    participant P as PostgreSQL
+    C->>N: POST /v1/requests
+    N->>A: least_conn
+    A->>P: BEGIN
+    A->>P: SELECT assign_team(district, kits)
+    Note over P: FOR UPDATE рядка district_teams,<br/>вибір вільної команди
+    A->>P: INSERT help_request (assigned)
+    A->>P: COMMIT
+    A-->>C: 201 Created + Location
+```
+
+![Вебклієнт ЛР1](results/web-lr1/web-client-created.png)
+
+*Рисунок 1 — вебклієнт: заявку створено, команду призначено, усі сторінки списку прочитано.*
 
 #### ЛР2. Конкуренція та повторення запитів
 
@@ -350,7 +374,7 @@ stateDiagram-v2
 
 | Дослід | Режим і команда | Що видно / посилання на результат |
 |---|---|---|
-| | | |
+| Сценарій Web ЛР1 | `python experiments/web_lr1_scenario.py` | 14/14 перевірок, усі сторінки списку без пропусків і повторів — `results/web-lr1/scenario.json` |
 
 Умови, прогноз, вимірювання й висновки кожного досліду - у `results/<ЛР>/README.md`.
 
@@ -362,4 +386,14 @@ stateDiagram-v2
 
 | Учасник | Реалізовані пункти й виконані досліди |
 |---|---|
-| Малюта Артем | Web О1.1 - модель предметної області |
+| Малюта Артем | Web ЛР1 (О1.1-О1.7, Д1.1) |
+
+### Використані бібліотеки
+
+| Бібліотека | Для чого використана | Місце застосування |
+|---|---|---|
+| FastAPI, Pydantic | HTTP-маршрути, перевірка вхідних даних | `web/server/app/requests_api.py`, `dpc/api/app/assign.py`, `compute.py` |
+| Uvicorn | Запуск серверів | `web/server/Dockerfile`, `dpc/api/Dockerfile` |
+| Psycopg 3 | З'єднання з PostgreSQL, транзакції | `requests_api.py`, `idempotency.py`, `assign.py` |
+| asyncio, concurrent.futures, multiprocessing | Черга, обробники, пул процесів, спільна сума | `assign.py`, `compute.py`, `integral.py` |
+| Каркаси комплектів курсів | Журнал JSON, Problem Details, `/health`, `/metrics`, керовані відмови | `web/server/app/*`, `dpc/api/app/*` |
