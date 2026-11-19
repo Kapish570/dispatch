@@ -1,150 +1,135 @@
 <!doctype html>
-<!-- Shell of the web client: login and one request form. Replace the form with the scenarios of
-     your card (O1.7, O3.4, O4.5, O5.4). Run: python -m http.server 8081 --bind 127.0.0.1 --directory client -->
+<!-- Клієнт «Диспетчерська допомоги» (C30, частина Web): подати заявку, побачити призначену
+     команду, помилку у форматі Problem Details і всі сторінки списку «Мої заявки».
+     Запуск: python -m http.server 8081 --bind 127.0.0.1 --directory client -->
 <html lang="uk">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Клієнт проєкту</title>
+    <title>Диспетчерська допомоги</title>
     <style>
-        body {
-            font: 15px/1.5 system-ui, sans-serif;
-            max-width: 48rem;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-
-        fieldset {
-            margin-bottom: 1.5rem;
-            border: 1px solid #ccc;
-        }
-
-        label {
-            display: block;
-            margin: .4rem 0;
-        }
-
-        input, select, textarea {
-            font: inherit;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        textarea {
-            height: 6rem;
-            font-family: ui-monospace, monospace;
-        }
-
-        button {
-            font: inherit;
-            margin-top: .5rem;
-        }
-
-        pre {
-            background: #f3f3f3;
-            padding: .75rem;
-            white-space: pre-wrap;
-        }
-
-        .problem {
-            color: #a00;
-        }
+        body { font: 15px/1.5 system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; }
+        fieldset { margin-bottom: 1.5rem; border: 1px solid #ccc; }
+        label { display: block; margin: .4rem 0; }
+        input, select { font: inherit; width: 100%; box-sizing: border-box; }
+        button { font: inherit; margin-top: .5rem; }
+        pre { background: #f3f3f3; padding: .75rem; white-space: pre-wrap; }
+        .problem { color: #a00; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #ccc; padding: .25rem .5rem; text-align: left; font-size: 14px; }
     </style>
 </head>
 <body>
-    <h1>Клієнт проєкту</h1>
+    <h1>Диспетчерська допомоги</h1>
 
     <fieldset>
-        <legend>Вхід</legend>
-        <form id="login-form">
-            <label>Логін <input name="login" autocomplete="username" required></label>
-            <label>Пароль <input name="password" type="password" autocomplete="current-password" required></label>
-            <button>Увійти</button>
-            <button type="button" id="logout">Вийти</button>
-        </form>
-        <p id="who">Не виконано вхід.</p>
+        <legend>Користувач (до ЛР3 — заголовок X-User-Id)</legend>
+        <select id="user">
+            <option value="u-applicant-1">Олена Коваль (заявник)</option>
+            <option value="u-applicant-2">Петро Мельник (заявник)</option>
+            <option value="u-dispatcher">Диспетчер зміни (персонал)</option>
+        </select>
     </fieldset>
 
     <fieldset>
-        <legend>Запит</legend>
-        <form id="request-form">
-            <label>Метод
-                <select name="method">
-                    <option>GET</option>
-                    <option>POST</option>
-                    <option>PATCH</option>
-                    <option>DELETE</option>
+        <legend>Подати заявку на допомогу</legend>
+        <form id="create-form">
+            <label>Район
+                <select name="district_id">
+                    <option value="center">Центральний</option>
+                    <option value="saltivka">Салтівський (3 команди)</option>
+                    <option value="no-such-district">Неіснуючий район (перевірка 404)</option>
                 </select>
             </label>
-            <label>Шлях <input name="path" value="/v1/me"></label>
-            <label>Тіло JSON (порожньо — без тіла)
-                <textarea name="body"></textarea>
+            <label>Адреса <input name="address" value="вул. Сумська, 10, кв. 5" required></label>
+            <label>Вид допомоги
+                <select name="kind">
+                    <option value="medicine">доставка ліків</option>
+                    <option value="escort">супровід</option>
+                    <option value="food">продукти</option>
+                    <option value="other">інше</option>
+                </select>
             </label>
-            <label><input type="checkbox" name="idempotent" style="width:auto"> з новим Idempotency-Key</label>
-            <button>Надіслати</button>
+            <label>Пріоритет (1 — терміново, 3 — звичайний)
+                <input name="priority" type="number" min="1" max="3" value="2">
+            </label>
+            <label>Кількість наборів допомоги <input name="kits" type="number" min="0" max="20" value="0"></label>
+            <button>Подати й призначити команду</button>
         </form>
     </fieldset>
 
-    <h2>Відповідь</h2>
+    <h2>Результат</h2>
     <pre id="out">—</pre>
 
+    <h2>Мої заявки <button id="refresh" type="button">Оновити (усі сторінки)</button></h2>
+    <p id="pages"></p>
+    <table>
+        <thead><tr><th>Створено (Київ)</th><th>Район</th><th>Вид</th><th>Команда</th><th>Стан</th><th>Підтвердити до</th></tr></thead>
+        <tbody id="list"></tbody>
+    </table>
+
     <script type="module">
-        import {call, login, logout, newKey, Problem} from "./api.js";
+        import {call, getUser, listAll, Problem, setUser} from "./api.js";
 
         const out = document.getElementById("out");
+        const zone = {timeZone: "Europe/Kyiv", dateStyle: "short", timeStyle: "medium"};
+        const fmt = (iso) => (iso ? new Date(iso).toLocaleString("uk-UA", zone) : "—");
 
         const show = (value, isProblem = false) => {
             out.className = isProblem ? "problem" : "";
             out.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
         };
 
-        const report = (error) =>
-            error instanceof Problem
-                ? show({status: error.status, ...error.body}, true)
-                : show(String(error), true);
+        // Помилка у форматі Problem Details: показуємо title, detail і поля помилок.
+        const report = (error) => {
+            if (!(error instanceof Problem)) return show(`Немає зв'язку з сервером: ${error}`, true);
+            const b = error.body ?? {};
+            const lines = [`Помилка ${error.status}: ${b.title ?? ""}`];
+            if (b.detail) lines.push(b.detail);
+            for (const e of b.errors ?? []) lines.push(`  • ${e.field}: ${e.message}`);
+            show(lines.join("\n"), true);
+        };
 
-        async function refreshWho() {
+        const userSelect = document.getElementById("user");
+        userSelect.value = getUser();
+        userSelect.onchange = () => { setUser(userSelect.value); refresh(); };
+
+        document.getElementById("create-form").onsubmit = async (event) => {
+            event.preventDefault();
+            const form = new FormData(event.target);
+            const body = {
+                district_id: form.get("district_id"),
+                address: form.get("address"),
+                kind: form.get("kind"),
+                priority: Number(form.get("priority")),
+                kits: Number(form.get("kits")),
+            };
             try {
-                const {data} = await call("GET", "/v1/me");
-                document.getElementById("who").textContent = `${data.name ?? data.id} (${data.role})`;
-            } catch {
-                document.getElementById("who").textContent = "Не виконано вхід.";
+                const {status, headers, data} = await call("POST", "/v1/requests", {body});
+                // Невідомі додаткові поля відповіді просто ігноруються: читаємо лише відомі.
+                show(`${status}: заявку прийнято, призначено команду ${data.team_id}\n` +
+                     `Стан: ${data.status}; підтвердити до ${fmt(data.accept_deadline)}\n` +
+                     `Location: ${headers.get("location")}`);
+                await refresh();
+            } catch (error) {
+                report(error);
+            }
+        };
+
+        async function refresh() {
+            try {
+                const {items, pages} = await listAll("/v1/requests", 5);
+                document.getElementById("pages").textContent = `Прочитано сторінок: ${pages}, заявок: ${items.length}`;
+                document.getElementById("list").innerHTML = items.map((r) =>
+                    `<tr><td>${fmt(r.created_at)}</td><td>${r.district_id}</td><td>${r.kind}</td>` +
+                    `<td>${r.team_id ?? "—"}</td><td>${r.status}</td><td>${fmt(r.accept_deadline)}</td></tr>`).join("");
+            } catch (error) {
+                report(error);
             }
         }
 
-        document.getElementById("login-form").onsubmit = async (event) => {
-            event.preventDefault();
-            const form = new FormData(event.target);
-            try {
-                await login(form.get("login"), form.get("password"));
-                await refreshWho();
-                show("вхід виконано");
-            } catch (error) {
-                report(error);
-            }
-        };
-
-        document.getElementById("logout").onclick = async () => {
-            await logout().catch(report);
-            await refreshWho();
-        };
-
-        document.getElementById("request-form").onsubmit = async (event) => {
-            event.preventDefault();
-            const form = new FormData(event.target);
-            const text = form.get("body").trim();
-            try {
-                const reply = await call(form.get("method"), form.get("path"), {
-                    body: text ? JSON.parse(text) : undefined,
-                    idempotencyKey: form.get("idempotent") ? newKey() : undefined,
-                });
-                show({status: reply.status, location: reply.headers.get("location"), body: reply.data});
-            } catch (error) {
-                report(error);
-            }
-        };
-
-        refreshWho();
+        document.getElementById("refresh").onclick = refresh;
+        refresh();
     </script>
 </body>
 </html>

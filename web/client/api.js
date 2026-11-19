@@ -1,5 +1,6 @@
-// Calls to the system through nginx: base address, access token, Idempotency-Key, Problem Details.
-// Serve the client outside Compose:  python -m http.server 8081 --bind 127.0.0.1 --directory client
+// Звернення до системи лише через адресу nginx: базова адреса, X-User-Id (до ЛР3),
+// Idempotency-Key, Problem Details.
+// Запуск поза Compose:  python -m http.server 8081 --bind 127.0.0.1 --directory client
 
 export const API = localStorage.getItem("api") ?? "http://localhost:8080";
 
@@ -11,25 +12,16 @@ export class Problem extends Error {
     }
 }
 
-let token = sessionStorage.getItem("token");
-
-export function setToken(value) {
-    token = value;
-    if (value) {
-        sessionStorage.setItem("token", value);
-    } else {
-        sessionStorage.removeItem("token");
-    }
-}
-
-export const loggedIn = () => Boolean(token);
+// До ЛР3 користувача визначає заголовок X-User-Id (заздалегідь створений користувач).
+export const getUser = () => localStorage.getItem("userId") ?? "u-applicant-1";
+export const setUser = (id) => localStorage.setItem("userId", id);
 
 export async function call(method, path, {body, idempotencyKey, headers = {}} = {}) {
     const reply = await fetch(API + path, {
         method,
         headers: {
             ...(body !== undefined ? {"Content-Type": "application/json"} : {}),
-            ...(token ? {Authorization: `Bearer ${token}`} : {}),
+            "X-User-Id": getUser(),
             ...(idempotencyKey ? {"Idempotency-Key": idempotencyKey} : {}),
             ...headers,
         },
@@ -47,16 +39,18 @@ export async function call(method, path, {body, idempotencyKey, headers = {}} = 
 
 export const newKey = () => crypto.randomUUID();
 
-export async function login(loginName, password) {
-    const {data} = await call("POST", "/v1/auth/login", {body: {login: loginName, password}});
-    setToken(data.access_token);
-    return data;
-}
-
-export async function logout() {
-    try {
-        await call("POST", "/v1/auth/logout");
-    } finally {
-        setToken(null);
-    }
+// Читає всі сторінки списку за next_cursor (О1.5, О1.7).
+export async function listAll(path, limit = 20) {
+    const items = [];
+    let cursor = null;
+    let pages = 0;
+    do {
+        const query = new URLSearchParams({limit: String(limit)});
+        if (cursor) query.set("cursor", cursor);
+        const {data} = await call("GET", `${path}?${query}`);
+        items.push(...data.items);
+        cursor = data.next_cursor ?? null;
+        pages += 1;
+    } while (cursor);
+    return {items, pages};
 }
